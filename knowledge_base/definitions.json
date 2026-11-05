@@ -1,0 +1,1 @@
+[{"id":"metric-operating-1","title":"本地指标定义","version":"1.0","effective_date":"2026-11-04","locator":"经营利润段","keywords":["利润","profit","毛利"],"text":"经营利润=收入−成本−费用；未覆盖税费及其他损益，不等于净利润。收入为零时毛利率为 null。本说明为项目规则，不是会计准则。"}]

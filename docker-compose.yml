@@ -1,0 +1,47 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: infrastructure/Dockerfile.backend
+    ports: ["127.0.0.1:8001:8000"]
+    environment:
+      FINAGENT_AUTH_MODE: ${FINAGENT_AUTH_MODE:-demo}
+      FINAGENT_TENANT_ROOT: /data/tenants
+      FINAGENT_ALLOWED_HOSTS: 127.0.0.1,localhost,backend
+      FINAGENT_MODEL_API_KEY: ${FINAGENT_MODEL_API_KEY:-}
+      FINAGENT_MODEL: ${FINAGENT_MODEL:-}
+      FINAGENT_MODEL_BASE_URL: ${FINAGENT_MODEL_BASE_URL:-}
+      FINAGENT_ALLOW_MODEL_NETWORK: ${FINAGENT_ALLOW_MODEL_NETWORK:-0}
+      FINAGENT_WAREHOUSE_URL: ${FINAGENT_WAREHOUSE_URL:-}
+      FINAGENT_WAREHOUSE_PRODUCTION: ${FINAGENT_WAREHOUSE_PRODUCTION:-0}
+      FINAGENT_WAREHOUSE_READERS_JSON: ${FINAGENT_WAREHOUSE_READERS_JSON:-}
+      FINAGENT_COOKIE_SECURE: ${FINAGENT_COOKIE_SECURE:-0}
+    volumes: ["mvp_data:/data"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/ready')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+  postgres:
+    image: postgres:16-alpine
+    profiles: ["postgres"]
+    environment:
+      POSTGRES_DB: finagent
+      POSTGRES_USER: finagent
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-development-only}
+    ports: ["127.0.0.1:5433:5432"]
+    volumes: ["pg_data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U finagent -d finagent"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  next:
+    profiles: ["next"]
+    build:
+      context: .
+      dockerfile: infrastructure/Dockerfile.next
+    ports: ["127.0.0.1:3000:3000"]
+volumes:
+  mvp_data:
+  pg_data:

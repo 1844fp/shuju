@@ -1,0 +1,14 @@
+services:
+  https:
+    image: caddy:2-alpine
+    ports: ["127.0.0.1:8443:443"]
+    environment:
+      FINAGENT_DOMAIN: localhost
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - tls_data:/data
+      - tls_config:/config
+    extra_hosts: ["host.docker.internal:host-gateway"]
+volumes:
+  tls_data:
+  tls_config:

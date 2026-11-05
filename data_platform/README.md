@@ -1,0 +1,6 @@
+# PostgreSQL standalone warehouse
+Install workspace dependencies: `python -m pip install --target <workspace-runtime> "psycopg[binary]" dbt-postgres` and set PYTHONPATH accordingly. Set DATABASE_URL to a dedicated PostgreSQL database. Run `python data_platform/manage.py migrate`, then `python data_platform/manage.py load-demo`. Repeat load is a no-op. `python data_platform/manage.py check` validates fixture precision and balance without a database.
+
+Migration and loader use transactions. Use a migration owner; do not expose that credential to agents. This module is independent of the SQLite backend and does not migrate its existing data. ODS stores original JSON; entire invalid vouchers are quarantined. Loader is deliberately restricted to the bundled simulated fixture. Database-level balance enforcement and authorization/RLS remain integration work; organizational keys prevent cross-organization references but are not access control.
+
+For dbt, configure an external profiles.yml using environment credentials and a dedicated target schema, then run `dbt run --project-dir dbt` and `dbt test --project-dir dbt`. Base DWS is migration-defined; dbt publishes derived views and tests. No credentials are committed.

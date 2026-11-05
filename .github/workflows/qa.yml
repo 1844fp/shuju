@@ -1,0 +1,20 @@
+name: QA
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r backend/requirements.txt -r agents/requirements.txt
+      - run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - run: python backend/test_backend.py
+        env:
+          PYTHONPATH: backend
+      - run: python -m unittest discover -s infrastructure/production -p "test_*.py" -v
+      - run: node --check frontend/app.js
+      - run: node --check frontend/operations.js
+      - run: POSTGRES_PASSWORD=ci-only docker compose config --quiet
+      - run: docker build -f infrastructure/Dockerfile.backend .

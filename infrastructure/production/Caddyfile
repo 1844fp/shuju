@@ -1,0 +1,6 @@
+{$FINAGENT_DOMAIN:localhost} {
+ tls internal
+ header Strict-Transport-Security "max-age=31536000"
+ request_body { max_size 11MB }
+ reverse_proxy host.docker.internal:3000
+}

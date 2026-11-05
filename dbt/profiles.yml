@@ -1,0 +1,12 @@
+finagent:
+  target: acceptance
+  outputs:
+    acceptance:
+      type: postgres
+      host: "{{ env_var('DBT_HOST', '127.0.0.1') }}"
+      port: "{{ env_var('DBT_PORT', '55432') | int }}"
+      user: "{{ env_var('DBT_USER') }}"
+      password: "{{ env_var('DBT_PASSWORD') }}"
+      dbname: "{{ env_var('DBT_DATABASE', 'finagent_acceptance') }}"
+      schema: analytics
+      threads: 1

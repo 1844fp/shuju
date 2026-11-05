@@ -1,0 +1,17 @@
+FROM python:3.12-slim
+WORKDIR /app
+COPY backend/requirements.txt /app/backend/requirements.txt
+COPY agents/requirements.txt /app/agents/requirements.txt
+RUN pip install --no-cache-dir -r backend/requirements.txt -r agents/requirements.txt
+COPY agents /app/agents
+COPY knowledge_base /app/knowledge_base
+COPY backend /app/backend
+COPY frontend /app/frontend
+COPY data_platform /app/data_platform
+COPY mcp_servers /app/mcp_servers
+COPY infrastructure/container_entry.py /app/infrastructure/container_entry.py
+RUN useradd --uid 10001 --create-home app && mkdir /data && chown app /data
+USER app
+ENV DATABASE_URL=sqlite:////data/local.db
+EXPOSE 8000
+CMD ["python", "infrastructure/container_entry.py"]

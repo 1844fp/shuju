@@ -1,0 +1,6 @@
+name: finagent
+version: '1.0'
+config-version: 2
+profile: finagent
+model-paths: [models]
+test-paths: [tests]

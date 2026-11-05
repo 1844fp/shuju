@@ -1,0 +1,14 @@
+work/
+.git/
+**/node_modules/
+**/.next/
+**/__pycache__/
+**/.env
+**/.env.*
+**/*.db
+**/*.sqlite
+**/*.sqlite3
+**/*.pem
+**/*.key
+tenants/
+backups/

@@ -1,0 +1,9 @@
+# Jobs delivery · 2026-11-05
+
+Files: backend/jobs.py, backend/test_jobs.py. Integration: import jobs after core app initialization; jobs.install(app). Startup must call jobs.recover(engine) once for EACH organization engine before accepting traffic. No app.py or identity.py changes made.
+
+POST /api/v1/jobs {kind: report|analysis,input:{...},max_retries:0..3}; GET /jobs/{id}; POST /jobs/{id}/cancel. Status queued/running/completed/failed/cancelled persisted in metadata_async_job in the captured organization database. Two background threads; core.request_database ContextVar explicitly set/reset around execution. Analysis requires explicit mode=demo; unconfigured model requests return 503 before queueing. Report calls core.report, analysis calls integrations.execute_analysis. Errors do not persist exception secrets.
+
+Actual test: PYTHONPATH=shared work/runtime;work/agent-runtime; python backend/test_jobs.py => 1 composite test passed, covering cross-database lookup rejection, worker organization binding, bounded retry (two attempts), cancellation, interrupted-running recovery and report execution, disabled model rejection. Temporary SQLite only; existing servers untouched.
+
+Limits: single process deployment only (thread lock, no distributed lease). Recovery is an explicit startup integration responsibility; never call recover against live workers. Running cancellation is cooperative: terminal state/result publication cancelled, underlying synchronous calculation may finish and integrations may already write its legacy task/audit. Retry/recovery is at-least-once and can create duplicate legacy analysis records. No timeout/preemption/backoff or retention cleanup. Authentication/RBAC remains host middleware responsibility; primary must ensure jobs write routes are protected. No live HTTP integration or real model execution claimed.

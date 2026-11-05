@@ -1,0 +1,11 @@
+FROM node:22-alpine AS build
+WORKDIR /app
+ARG API_BASE_URL=http://backend:8000
+ENV API_BASE_URL=$API_BASE_URL
+COPY frontend/next/package*.json ./
+RUN npm ci
+COPY frontend/next ./
+RUN npm run build
+ENV NODE_ENV=production
+EXPOSE 3000
+CMD ["npm", "run", "start", "--", "--hostname", "0.0.0.0"]
