@@ -17,6 +17,7 @@ def install(app):
         try:
             intent=Provider(transport=getattr(app.state,'model_test_transport',None)).plan(body.question)
         except (RuntimeError,ValueError) as ex:
+            if str(ex)=='unsupported_model_request':raise HTTPException(422,'unsupported_model_request：仅支持授权的只读财务指标查询，请明确期间与币种') from None
             code=str(ex) if str(ex) in ('model_not_configured','model_network_disabled','model_provider_failed') else 'model_intent_invalid'
             raise HTTPException(503,code) from None
         value=core.save_task({'task_id':core.uid(),'type':'model_plan','status':'awaiting_confirmation','question':body.question,'intent':intent.model_dump(),'created_at':core.now()})

@@ -16,6 +16,7 @@ def submit(kind,body,max_attempts=3):
     with db.begin() as c:c.execute(t.insert().values(id=jid,organization=core.request_organization.get(),kind=kind,status='queued',attempts=0,max_attempts=max_attempts,owner=None,expires=0,input=json.dumps(body)))
     return get(db,core.request_organization.get(),jid)
 def get(db,org,jid):
+    initialize(db)
     with db.connect() as c:r=c.execute(select(t).where(t.c.id==jid,t.c.organization==org)).mappings().first()
     if not r:raise HTTPException(404,'任务不存在')
     r=dict(r)
@@ -40,6 +41,7 @@ def finish(db,org,jid,owner,result=None,error=None):
         return c.execute(update(t).where(owned(org,jid,owner)).values(status=('queued' if error else 'completed'),result=json.dumps(result) if result is not None else None,error='execution_failed' if error else None,owner=None,expires=0)).rowcount==1
 
 def cancel(db,org,jid):
+    initialize(db)
     with db.begin() as c:c.execute(update(t).where(t.c.id==jid,t.c.organization==org,t.c.status.in_(['queued','running'])).values(status='cancelled',owner=None,expires=0))
     return get(db,org,jid)
 def run_once(db,org,lease=30):

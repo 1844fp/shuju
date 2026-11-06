@@ -12,6 +12,7 @@ from sqlalchemy import select
 def main():
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('--organization',default='local-demo');p.add_argument('--once',action='store_true');a=p.parse_args()
  core.app.state.db=core.engine()
+ if os.getenv('FINAGENT_TENANT_ROOT'):core.app.state.tenant_root=Path(os.environ['FINAGENT_TENANT_ROOT']).resolve()
  if a.organization=='local-demo':
   if os.getenv('FINAGENT_AUTH_MODE')=='users':p.error('用户模式必须指定服务器中已存在的组织UUID')
   db=core.app.state.db

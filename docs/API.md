@@ -1,5 +1,8 @@
 # API 契约草案 v0.1
 
+## 2026-11-06 效果验收增量
+POST /analysis/plan 在供应商明确返回不支持的意图时返回422，message含 unsupported_model_request；缺配置/网络失败保持503。仅返回已验证的只读 finance_metrics 计划，不创建越界任务。GET /knowledge/semantic-search 新增 evidence_status（matches_found/no_matching_evidence）；结果新增 semantic_similarity、matched_text、chunk_start/chunk_end/chunk_sha256、fiscal_year_scope、rerank_method。score 为语义加标题术语的排序分数，不是概率或纯余弦值；低于初始语义阈值0.35不返回证据。版本/生效日期及组织范围仍生效。详见 MODEL_KNOWLEDGE_RELIABILITY_ACCEPTANCE.md。
+
 前缀 /api/v1；JSON UTF-8；金额以十进制字符串传输，比例为字符串或 null；日期 YYYY-MM-DD，期间 YYYY-MM。认证实施后采用 Bearer token，organization_id 从授权上下文获取，禁止信任客户端传入组织。
 
 ## 接口

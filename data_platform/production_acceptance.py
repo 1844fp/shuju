@@ -59,6 +59,10 @@ try:
   code="from dbt.cli.main import dbtRunner; import sys; r=dbtRunner().invoke(['build','--project-dir','dbt','--profiles-dir','dbt']); sys.exit(0 if r.success else 1)"
   subprocess.run([sys.executable,'-c',code],cwd=ROOT,env=env,check=True)
  print('PASS: real login binding, forged GUC rejection, SET ROLE identity retention, unmapped fail closed, mapping/base-table/escalation denial')
+ if os.getenv('PRODUCTION_RECOVERY')=='1':
+  sys.path.insert(0,str(ROOT))
+  from infrastructure.pg_recovery import exercise
+  exercise(ROOT,base,secret,alias)
 finally:
  if started:run('pg_ctl','-D',base/'data','-m','fast','-w','stop')
  pw.unlink(missing_ok=True)

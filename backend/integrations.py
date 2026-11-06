@@ -42,7 +42,7 @@ def execute_analysis(body):
         knowledge=retrieve_documents(question)
     result['sources'].extend(knowledge)
     for document in knowledge:
-        result['answer']+='\n\n知识引用（来源内容，非会计结论）：'+document['title']+' v'+document['version']+' '+document['locator']+' SHA256 '+document['content_sha256']+'\n'+document['text'][:800]
+        result['answer']+='\n\n知识引用（来源内容，非会计结论）：'+document['title']+' v'+document['version']+' '+document['locator']+' SHA256 '+document['content_sha256']+'\n'+document.get('matched_text',document['text'])[:800]
     task=core.save_task(dict(result,task_id=core.uid(),type='analysis',created_at=core.now(),mode='demo',metric_version='1.0'))
     record_audit('analysis',task['task_id'])
     return task

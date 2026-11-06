@@ -15,7 +15,9 @@ def install(app):
   if engine.status!='ready':raise HTTPException(503,engine.info())
   db=core.current_db();meta.create_all(db)
   with db.connect() as c: items=[json.loads(x) for x in c.execute(select(docs.c.payload)).scalars()]
-  try:return {**engine.info(),'matches':engine.search(q,items,as_of.isoformat() if as_of else None,version,limit)}
+  try:
+   matches=engine.search(q,items,as_of.isoformat() if as_of else None,version,limit)
+   return {**engine.info(),'matches':matches,'evidence_status':'matches_found' if matches else 'no_matching_evidence'}
   except ValueError as exc:raise HTTPException(422,str(exc))
 
 # Resolve the host after install() is defined so direct module tests cannot cycle.
