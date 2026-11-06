@@ -60,3 +60,4 @@
 - Deviations：上传前无本地 Git 历史，远端为空；从现有源码建立 v0.1.0，v0.1.1 只整理说明与 CI，不伪造旧轮次版本。
 - Discovered edge cases：原忽略规则未覆盖 work/、data_sources/ 和通用数据库扩展名，已补齐；数据库 URL 扫描命中的是 CHANGE_ME 模板和运行时随机测试凭据表达式。
 - Questions for review：版本使用分支保留，尚无 Git tag、GitHub Release 或分支保护。远端 CI 执行结果另行核实，不等于本地测试结果。
+- Discovered edge cases：远端干净克隆无 work/，导致 11 次测试执行缺临时目录；v0.1.2 显式初始化。已读取 Actions 失败日志，不归因于业务功能失败。

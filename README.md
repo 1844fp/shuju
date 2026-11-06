@@ -8,7 +8,7 @@
 
 ## 源码与版本
 
-仓库：[1844fp/shuju](https://github.com/1844fp/shuju)。`main` 是最新集成版，`versions/v0.1.0` 是首次完整源码快照，`versions/v0.1.1` 是发布整理版（说明与 CI 增量）。这两个版本从本次交付开始记录，早期开发轮次没有可恢复的 Git 历史。切换方法与变更见 [版本说明](docs/VERSIONS.md) 和 [更新日志](CHANGELOG.md)。
+仓库：[1844fp/shuju](https://github.com/1844fp/shuju)。`main` 是最新集成版，`versions/v0.1.0` 是首次完整源码快照，`versions/v0.1.1` 是发布整理版，`versions/v0.1.2` 修复干净克隆的 CI 临时目录初始化。版本从本次交付开始记录，早期开发轮次没有可恢复的 Git 历史。切换方法与变更见 [版本说明](docs/VERSIONS.md) 和 [更新日志](CHANGELOG.md)。
 
 仓库不含 `.env`、真实业务数据、本机数据库、依赖目录、模型权重和 Docker 安装包。复制 `.env.example` 为 `.env` 后按需配置；密钥仅在本地环境中设置。
 

@@ -12,6 +12,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -r backend/requirements.txt -r agents/requirements.txt
+      - run: mkdir -p work
       - run: python -m unittest discover -s tests -p 'test_*.py' -v
       - run: python backend/test_backend.py
       - run: python -m unittest discover -s infrastructure/production -p "test_*.py" -v
