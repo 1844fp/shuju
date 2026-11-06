@@ -38,7 +38,9 @@ def engine(url=None):
         c.execute(text("CREATE VIEW IF NOT EXISTS ads_finance_dashboard AS SELECT *, revenue_cents-cost_cents-expense_cents AS operating_profit_cents FROM dws_monthly_finance"))
     return e
 
-def ingest(e, rows, digest, source, source_system='local', kind='uploaded'):
+def ingest(e, rows, digest, source, source_system='local', kind='uploaded', account_catalog=None):
+    catalog=ACCOUNTS if account_catalog is None else account_catalog
+    if not isinstance(catalog,dict) or any(x not in {'asset','liability','equity','revenue','cost','expense','other'} for x in catalog.values()):raise ValueError('服务端科目分类无效')
     if not re.fullmatch(r'[A-Za-z0-9_-]{1,50}',source_system): raise ValueError('来源系统只能使用字母、数字、下划线和连字符')
     with e.begin() as c:
         old=c.execute(select(batches).where(batches.c.sha256==digest)).mappings().first()
@@ -57,14 +59,14 @@ def ingest(e, rows, digest, source, source_system='local', kind='uploaded'):
                 if not re.fullmatch('[A-Z]{3}',key[2]): raise ValueError('币种须为三位大写代码')
                 for n,row in items:
                     if any(f not in row for f in FIELDS): raise ValueError('缺少必需字段')
-                    if row['account_code'] not in ACCOUNTS: raise ValueError('未知科目：'+str(row['account_code']))
+                    if row['account_code'] not in catalog: raise ValueError('未知科目：'+str(row['account_code']))
                     line=int(row['line_no'])
                     if line<1: raise ValueError('行号必须为正整数')
                     d,cr=cents(row['debit']),cents(row['credit'])
                     if (d>0)==(cr>0): raise ValueError('每行须且仅须一方有金额')
                     bk=json.dumps([source_system,key[0][:4],key[1],line],ensure_ascii=False)
                     if bk in seen or any(s['business_key']==bk for s in staged) or c.execute(select(facts.c.id).where(facts.c.business_key==bk)).first(): raise ValueError('重复业务键')
-                    staged.append(dict(id=uid(),business_key=bk,batch_id=bid,period=key[0][:7],currency=key[2],category=ACCOUNTS[row['account_code']],debit_cents=d,credit_cents=cr,payload=json.dumps(row,ensure_ascii=False)))
+                    staged.append(dict(id=uid(),business_key=bk,batch_id=bid,period=key[0][:7],currency=key[2],category=catalog[row['account_code']],debit_cents=d,credit_cents=cr,payload=json.dumps(row,ensure_ascii=False)))
                 if sum(x['debit_cents']-x['credit_cents'] for x in staged)!=0: raise ValueError('凭证借贷不平衡')
             except (ValueError,TypeError,InvalidOperation) as ex: failure=str(ex)
             if failure:
@@ -288,3 +290,12 @@ leased_jobs.install(app)
 
 import semantic_routes
 semantic_routes.install(app)
+
+import erp_imports
+erp_imports.install(app)
+
+import erp_database
+erp_database.install(app)
+
+import erp_accounts
+erp_accounts.install(app)

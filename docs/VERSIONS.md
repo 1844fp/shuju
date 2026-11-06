@@ -5,6 +5,7 @@
 ## 可用版本
 
 - `main`：最新集成源码，后续更新以此为基础。
+- `versions/v0.3.0`：企业ERP导入、科目核准及清洗全流程；使用及验收见ERP_INTEGRATION.md、ERP_ACCEPTANCE.md。
 - `versions/v0.2.0`：公开数据模型知识效果、运行保障与监控验收版；详见 MODEL_KNOWLEDGE_RELIABILITY_ACCEPTANCE.md。
 - `versions/v0.1.0`：首次源码基线，提交 `475d41dc6973e0fcba378064d9d119dc51f0ad7c`，165 个受检查文件。
 - `versions/v0.1.1`：README、版本索引和 GitHub CI 整理；业务代码与 v0.1.0 一致。

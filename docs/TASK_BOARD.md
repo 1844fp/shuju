@@ -1,5 +1,12 @@
 # 任务板
 
+## 企业ERP导入与清洗
+主控负责 backend/erp_imports.py、backend/erp_database.py、backend/app.py集成、frontend/next/app/connectors/page.tsx、tests/test_erp_imports.py及隔离数据库验收入口。新增接口统一在 /erp 下，不更改旧连接器契约。凭证文件CSV/XLSX与服务器登记的只读数据库源共用：原始文件/记录保留→预览映射→精确清洗→凭证级质量隔离→人工确认→幂等入库→来源/指标。产品预设仅表示常见导出字段约定，不声称任何企业版本已经实连。每组织绑定一个ERP账套，防止默认指标混合不同账套；凭证号包含月份/凭证字，避免月度编号重复冲突。
+
+科目契约增量：新增组织核准科目目录 backend/erp_accounts.py；core.ingest仅增加服务器内部可选account_catalog参数，旧调用仍使用原内置目录，不接受客户端类别覆盖。ERP事实保留原始科目编码，分类从该组织核准目录取得。清洗绑定目录哈希，确认时变化则409；已核准类别不允许静默重分类。UI及科目CSV/XLSX导入同步验收。报表模块此前已扩展内置科目，组织目录在其上增加企业自定义代码，不修改旧分类。
+
+本轮已交付并本机加载：七种字段预设、企业目录核准、CSV/XLSX与登记DB/API清洗确认流程；92次全量执行91通过1环境跳过，真实PG读取及隔离浏览器通过，详见ERP_ACCEPTANCE.md。MySQL/SQL Server与厂商客户实例实连、CDC/定时同步、ERP回写仍不作已完成声明。
+
 ## 模型知识效果与运行保障验收
 主控负责 agents/semantic.py、agents/provider.py、backend/model_routes.py 的必要修复，以及 infrastructure 下的公开资料评测、备份恢复和本地告警验收脚本、对应测试与文档。所有试验数据库、下载原文和执行结果放 work/acceptance/，不改用户现有数据、不把报表汇总伪装为凭证。模型仅接收公开资料测试问题。共享契约仅在发现并记录必要修复后向后兼容增加字段或明确错误码。
 

@@ -63,6 +63,10 @@ try:
   sys.path.insert(0,str(ROOT))
   from infrastructure.pg_recovery import exercise
   exercise(ROOT,base,secret,alias)
+ if os.getenv('PRODUCTION_ERP')=='1':
+  sys.path.insert(0,str(ROOT))
+  from infrastructure.erp_postgres_acceptance import exercise as erp_exercise
+  erp_exercise(ROOT,secret)
 finally:
  if started:run('pg_ctl','-D',base/'data','-m','fast','-w','stop')
  pw.unlink(missing_ok=True)

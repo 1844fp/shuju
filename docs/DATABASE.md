@@ -1,5 +1,12 @@
 # 数据模型契约草案 v0.1
 
+## ERP接入存储增量
+本机接入库新增ods_erp_file(id,digest唯一,content二进制,metadata)保留原始文件或含原始API页的快照；metadata_erp_run(id,payload)保留原始行、清洗前后值、变化/错误、质量、规则和目录哈希、确认令牌及真实批次引用。原始输入没有更新API。
+
+metadata_erp_ledger以active单行绑定当前组织账套；metadata_erp_receipt以账套+原始快照哈希唯一标识提交配置和batch_id；metadata_erp_account保存当前组织核准的code/name/category，分类不允许静默变更。组织归属由物理数据库上下文决定，不信任客户端organization_id。
+
+core.ingest增加仅服务器内部使用的account_catalog参数，ERP传核准目录，旧调用沿用原内置科目；财务金额仍整数分存储/Decimal解析。凭证号含月份和类别，business_key来源命名空间按账套固定。不同币种不混算，科目目录哈希在清洗与确认间一致。此处不声称所有SQLite接入表已经迁移为PG；自定义科目发布到数仓前仍需核准对应维度。
+
 PostgreSQL 单实例以 schema 隔离；所有业务表含 organization_id，所有时间使用 timestamptz（UTC），业务期间按企业会计时区确定。
 
 ## 分层

@@ -1,5 +1,7 @@
 # FinAgent DataHub · 财务数据中台
 
+ERP接入：[使用与配置](docs/ERP_INTEGRATION.md)、[验收与边界](docs/ERP_ACCEPTANCE.md)。数据源工作台已增加常见财务软件导出、企业科目核准、只读源、清洗隔离和人工确认流程。
+
 最新增量：[模型知识效果与运行保障验收](docs/MODEL_KNOWLEDGE_RELIABILITY_ACCEPTANCE.md)、[运行手册](docs/OPERATIONS_RUNBOOK.md)。v0.2.0 增加公开资料评测、长文分块与拒绝路径修复、恢复演练和持续本机监控。下载资料、评测库、备份及事件均在被忽略的 work/ 内。
 
 当前已集成本机演示闭环，主入口：http://127.0.0.1:3000 ，分析治理：http://127.0.0.1:3000/operations 。

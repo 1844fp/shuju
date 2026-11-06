@@ -1,5 +1,16 @@
 # API 契约草案 v0.1
 
+## ERP接入增量
+GET /erp/profiles、GET /erp/templates/{profile}：七种常见导出字段预设及明确模拟模板。POST /erp/preview：multipart file、ledger_id、profile、可选sheet/header_row，201预览，保留原始字节，不入事实。GET /erp/runs、/{id}、/{id}/rows?status&offset&limit：当前组织的导入历史、详情和行级审查；跨组织404。
+
+POST /erp/runs/{id}/clean：mapping（标准字段→源列，空字符串明确取消推断）、account_map、currency_map、default_currency、fill_down_headers、generate_line_numbers、amount_mode（split/signed_by_direction/absolute_by_direction）及data_kind。返回quality、cleaning_options、cleaning_token、account_catalog_sha256和清洗版本；不入事实。GET /erp/runs/{id}/errors.csv 导出异常审查记录。
+
+POST /erp/runs/{id}/commit：{cleaning_token,acknowledge_quarantine}，仅入合格凭证，返回真实batch及提交阶段错误；同文件/账套重放幂等，不同配置409，账套/科目目录/令牌不符409；身份不明或无合格凭证422。批次status=committed表示已执行提交处理，实际接收行和失败状态以batch为准，不表示每行有效。
+
+GET/POST /erp/accounts：读取/明确核准组织科目，POST {approved:true,accounts:[{code,name,category}]}，类别为asset/liability/equity/revenue/cost/expense/other。GET /erp/accounts/template；POST /erp/accounts/import multipart file、approved、header_row、sheet：核准科目表CSV/XLSX，拒绝模糊类别及静默重分类。
+
+GET /erp/sources 仅显示服务器为当前组织登记的源ID/名称/类型/账套和只读确认，不返回凭据。POST /erp/source-preview {source_id,profile,ledger_id} 读取登记的只读DB/API并进入相同预览。禁止客户端DSN、SQL、URL或组织覆盖。写操作仅org_admin/platform_admin，reader/analyst不可导入或核准。配置、限额与实连边界见 ERP_INTEGRATION.md。
+
 ## 2026-11-06 效果验收增量
 POST /analysis/plan 在供应商明确返回不支持的意图时返回422，message含 unsupported_model_request；缺配置/网络失败保持503。仅返回已验证的只读 finance_metrics 计划，不创建越界任务。GET /knowledge/semantic-search 新增 evidence_status（matches_found/no_matching_evidence）；结果新增 semantic_similarity、matched_text、chunk_start/chunk_end/chunk_sha256、fiscal_year_scope、rerank_method。score 为语义加标题术语的排序分数，不是概率或纯余弦值；低于初始语义阈值0.35不返回证据。版本/生效日期及组织范围仍生效。详见 MODEL_KNOWLEDGE_RELIABILITY_ACCEPTANCE.md。
 

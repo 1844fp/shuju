@@ -7,6 +7,7 @@ sys.path.insert(0,str(root))
 sys.path.insert(0,str(next(p for p in [root,*root.parents] if (p/'work'/'runtime').is_dir())/'work'/'agent-runtime'))
 sys.path.insert(0,str(root/'work'/'export-runtime'))
 sys.path.append(str(root/'work'/'semantic-runtime'))
+sys.path.append(str(root/'work'/'erp-runtime'))
 from configuration import load
 load(root)
 import app,uvicorn

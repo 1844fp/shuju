@@ -75,3 +75,17 @@
 发现边界：默认意图、跨财年/利润混淆、长文截断、新组织租约表和worker目录配置。
 验证：真实模型与语义、三库及PG恢复、任务进程中断、本地告警和现有回归通过；未宣称容器/断电/异机恢复。
 下次先读：docs/MODEL_KNOWLEDGE_RELIABILITY_ACCEPTANCE.md 与 docs/OPERATIONS_RUNBOOK.md。
+
+## ERP接入与清洗
+- Deviations：上轮额度中断的大段代码未执行，本轮已只读确认不存在后重新实现。厂商字段预设、协议适配和真实企业实连分开记录；没有客户凭据，不伪造认证成功。
+- Discovered edge cases：XLSX空单元格无coordinate、原XML金额文本精度、月度凭证编号复用、缺失/已知凭证字身份混用、汇总行误判均加入测试；未知身份阻止提交，未知科目不猜测。
+- Discovered edge cases：旧报表模块已扩充内置科目，不止初始化的四项。新增组织核准目录在其基础上保留企业自定义代码；目录哈希变化要求重新清洗，防止资产误当银行或静默重分类。
+- Discovered edge cases：部分PowerShell内联Python转义失败，未完成对应修改；已改为直接补丁和work脚本执行，驱动安装及最终验收单独核对。
+- Questions for review：MySQL/SQL Server仅适配及Python驱动就绪，ODBC系统驱动与实际企业实例未验收；厂商OAuth/登录签名由已授权环境或集成网关提供。读取期间跨页一致性需厂商快照/停写约定。
+
+- Discovered edge cases：with_server.py在Windows仅结束外层shell，旧测试进程残留造成旧构建被访问；已按端口/命令/目录严格核实后关闭，改为直接Popen并验证端口释放，重跑通过。
+本轮偏离：2项，协议夹具替代无授权客户实例；Windows测试管理改为直接持有子进程。
+最需复核：真实软件版本/二开字段、只读权限与源端跨页快照一致性。
+发现边界：月度编号/类别混用、源数值精度、科目核准和规则版本、Windows子进程退出。
+验证：92次全量执行91通过1环境跳过、PG实库链路、浏览器科目/凭证流程、ERP快照恢复及生产构建通过。
+下次先读：docs/ERP_INTEGRATION.md、docs/ERP_ACCEPTANCE.md，所有后续文件仍放E:\Codex\数据中台。
