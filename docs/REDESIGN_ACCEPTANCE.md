@@ -147,3 +147,7 @@ QA162次执行161通过1skip（18.182秒），qa-procurement-manifest-final.txt�
 主控备份work/operations/before-redesign-1793981567598372300后重载成功，semantic ready、7profiles及公开十年代理回归通过。前端默认8000主build18页已冻结，本会话只读请求3000/procurement实际HTTP200。源码及实际OpenAPI快照均122路径，不能因路径数相同就声称全部业务写路径已经生产验收。
 
 本机新功能已加载，撤销本轮“主服务未加载最新/前端build收尾”状态。主服务仍demo，users身份隔离来自独立测试；录屏尚未收尾不标完成。本轮GitHub未发布，Docker继续用户延后。remaining22项有效。本次无真实业务写入或服务操作。
+
+
+## 2026-11-07 GitHub实际发布及远端失败
+main CAS与versions/v0.5.0已发布真实源码3089856（含v0.4，不伪造独立历史），309文件远端blob逐一相符，秘密扫描0命中，work/env/数据未上传。真实Linux push CI前端成功、后端并行耗时断言first0.0885>=0.1失败，两个push作业均失败；详见RELEASE_V050_CI。已在本角色文档记录交QA主控协调，未改其测试，不把本机164通过替代远端结果。跨线程通知自动审批单独拒绝，已停止该动作。源码发布与CI全绿分开，后续修复须真实新提交。

@@ -5,6 +5,7 @@
 ## 可用版本
 
 - `main`：最新集成源码，后续更新以此为基础。
+- `versions/v0.5.0`：真实完整平台快照 `3089856bc114c7af8e4112f89da30b6081840066`，含v0.4企业控制与R11三指标回测；未伪造独立v0.4历史。远端CI存在耗时断言失败，见RELEASE_V050_CI.md。
 - `versions/v0.3.0`：企业ERP导入、科目核准及清洗全流程；使用及验收见ERP_INTEGRATION.md、ERP_ACCEPTANCE.md。
 - `versions/v0.2.0`：公开数据模型知识效果、运行保障与监控验收版；详见 MODEL_KNOWLEDGE_RELIABILITY_ACCEPTANCE.md。
 - `versions/v0.1.0`：首次源码基线，提交 `475d41dc6973e0fcba378064d9d119dc51f0ad7c`，165 个受检查文件。
@@ -42,3 +43,6 @@ git switch main
 ## v0.5.0真实最终快照（2026-11-07）
 
 目标分支`versions/v0.5.0`与main本轮发布使用同一真实源码快照，包含v0.4企业控制及完整平台收尾，不创建虚构v0.4历史。CAS发布结果与实际SHA见RELEASE_V050.md最终执行记录。R11最终冻结：收入/费用及核准现金流滚动回测+naive，缺月拒绝。主控原环境164次163通过1skip；干净依赖副本164次159通过5明确环境skip，前端18页default8000构建及浏览器专项通过。远端CI独立核对，不能用本机结果替代。
+
+
+最终执行：main与versions/v0.5.0已CAS发布3089856；版本分支保留该真实源码快照。后续main发布记录提交不改变其业务代码。旧“准备/未上传”段只保留历史语境，现以RELEASE_V050.md最终结果为准。
