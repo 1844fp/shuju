@@ -1,0 +1,2 @@
+external_id,date,currency,account,direction,amount,reference
+SIM-external_id,2026-01-01,CNY,SIM-account,inflow,12.30,SIM-reference

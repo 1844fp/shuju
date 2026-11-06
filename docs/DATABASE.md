@@ -1,5 +1,11 @@
 # 数据模型契约草案 v0.1
 
+## 企业控制与来源贯通（v0.4.0）
+
+组织接入库新增metadata_control_period（月份主键、状态、CAS版本、操作人/原因/时间）、metadata_import_approval（run/token/source_digest/snapshot_hash/maker/reviewer/状态/原因）、metadata_control_event（序号、规范JSON、前哈希、当前哈希）。控制事件与数据写入同事务；物理组织库隔离不变。finance_statement_mapping保存显式code/category/line；metadata_erp_batch_link关联已提交批次和原始ERP run。
+
+PG迁移003_erp_provenance.sql新增metadata.erp_snapshot（组织/批次、文件哈希/名称、原始bytea、清洗元数据）与ods.erp_source_row（组织/批次/源行号、原始/规范JSON、状态、错误与变化），无分析reader授权。发布企业科目按已接收事实类别建立dim.account，冲突拒绝整次发布；原始文件/隔离行与事实事务性发布，不回填旧已发布批次。金额仍NUMERIC(20,2)，不同币种分开。
+
 ## ERP接入存储增量
 本机接入库新增ods_erp_file(id,digest唯一,content二进制,metadata)保留原始文件或含原始API页的快照；metadata_erp_run(id,payload)保留原始行、清洗前后值、变化/错误、质量、规则和目录哈希、确认令牌及真实批次引用。原始输入没有更新API。
 

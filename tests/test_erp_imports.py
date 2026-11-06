@@ -15,6 +15,7 @@ class ERPTests(unittest.TestCase):
  def preview(self,content,name='data.csv',profile='generic',ledger='BOOK01',**extra):
   r=self.client.post('/api/v1/erp/preview',files={'file':(name,content)},data=dict(profile=profile,ledger_id=ledger,**extra));self.assertEqual(r.status_code,201,r.text);return r.json()
  def clean(self,v,**options):
+  options.setdefault('data_kind','simulated')
   r=self.client.post('/api/v1/erp/runs/'+v['id']+'/clean',json=options);self.assertEqual(r.status_code,200,r.text);return r.json()
  def commit(self,v,ack=False):return self.client.post('/api/v1/erp/runs/'+v['id']+'/commit',json=dict(cleaning_token=v['cleaning_token'],acknowledge_quarantine=ack))
  def csv(self,rows,fields=None,encoding='utf-8-sig'):

@@ -7,6 +7,8 @@ services:
     environment:
       FINAGENT_AUTH_MODE: ${FINAGENT_AUTH_MODE:-demo}
       FINAGENT_TENANT_ROOT: /data/tenants
+      FINAGENT_HARNESS_PATH: /data/harness/checkpoints.sqlite
+      FINAGENT_ERP_APPROVAL_REQUIRED: ${FINAGENT_ERP_APPROVAL_REQUIRED:-0}
       FINAGENT_ALLOWED_HOSTS: 127.0.0.1,localhost,backend
       FINAGENT_MODEL_API_KEY: ${FINAGENT_MODEL_API_KEY:-}
       FINAGENT_MODEL: ${FINAGENT_MODEL:-}

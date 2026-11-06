@@ -128,14 +128,18 @@ def install(app):
         payload=validate_register(body);payload['id']=core.uid();payload['created_at']=core.now()
         key=body.kind+':'+body.external_id
         ledger.create(core.current_db(),checkfirst=True)
+        import enterprise_controls as controls
+        controls.initialize(core.current_db())
         with core.current_db().begin() as c:
             previous=c.execute(select(ledger.c.payload).where(ledger.c.business_key==key)).scalar()
             if previous:
                 old=json.loads(previous)
                 if any(old[k]!=payload[k] for k in body.model_dump()):raise HTTPException(409,'相同外部编号已有不同内容，请核对后使用新编号')
                 return old
+            controls.assert_open(c,{body.period})
             c.execute(ledger.insert().values(id=payload['id'],kind=body.kind,business_key=key,payload=json.dumps(payload,ensure_ascii=False)))
             c.execute(core.audit.insert().values(id=core.uid(),action='register_'+body.kind,resource=payload['id'],created=core.now()))
+            controls.append(c,'register_'+body.kind,payload['id'])
         return payload
 
     @app.get('/api/v1/finance/registers')

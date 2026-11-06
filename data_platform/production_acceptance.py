@@ -58,7 +58,12 @@ try:
   env={**os.environ,'PYTHONPATH':str(ROOT/'work/dbt-stable'),'DBT_USER':'owner','DBT_PASSWORD':secret,'DBT_PORT':'55439','DBT_DATABASE':'postgres','DBT_SEND_ANONYMOUS_USAGE_STATS':'false','DBT_LOG_PATH':str(ROOT/'work/dbt-stable-logs'),'DBT_TARGET_PATH':str(ROOT/'work/dbt-stable-target')}
   code="from dbt.cli.main import dbtRunner; import sys; r=dbtRunner().invoke(['build','--project-dir','dbt','--profiles-dir','dbt']); sys.exit(0 if r.success else 1)"
   subprocess.run([sys.executable,'-c',code],cwd=ROOT,env=env,check=True)
+ runpy.run_path(str(ROOT/'data_platform/verify_workbench.py'),run_name='__main__')
+ sys.path.insert(0,str(ROOT/'data_platform'))
+ runpy.run_path(str(ROOT/'data_platform/verify_workbench_publish.py'),run_name='__main__')
  print('PASS: real login binding, forged GUC rejection, SET ROLE identity retention, unmapped fail closed, mapping/base-table/escalation denial')
+ if os.getenv('PRODUCTION_HTTP')=='1':
+  runpy.run_path(str(ROOT/'data_platform/verify_workbench_http.py'),run_name='__main__')
  if os.getenv('PRODUCTION_RECOVERY')=='1':
   sys.path.insert(0,str(ROOT))
   from infrastructure.pg_recovery import exercise
@@ -67,7 +72,14 @@ try:
   sys.path.insert(0,str(ROOT))
   from infrastructure.erp_postgres_acceptance import exercise as erp_exercise
   erp_exercise(ROOT,secret)
+ if os.getenv('PRODUCTION_ENTERPRISE')=='1':
+  sys.path.insert(0,str(ROOT))
+  from infrastructure.enterprise_warehouse_acceptance import exercise as enterprise_exercise
+  enterprise_exercise(ROOT,secret)
 finally:
  if started:run('pg_ctl','-D',base/'data','-m','fast','-w','stop')
  pw.unlink(missing_ok=True)
  subprocess.run(['subst',alias,'/D'],check=True)
+
+
+

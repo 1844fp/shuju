@@ -42,9 +42,10 @@ def pdf_bytes(rows,start,end,currency):
     for r in rows:
         from decimal import Decimal
         margin='不适用' if r['gross_margin'] is None else format(Decimal(r['gross_margin'])*100,'.2f')+'%'
-        story.append(KeepTogether([p(f"期间 {r['period']} · {r['currency']}"),p(f"收入 {r['revenue']}；成本 {r['cost']}；费用 {r['expense']}"),p(f"毛利润 {r['gross_profit']}；经营利润 {r['operating_profit']}；毛利率 {margin}" )]))
-        story += [p('指标版本：'+str(r['metric_version'])),p('数据类型：'+', '.join(r['data_kind']))]
-        for bid in r['batch_ids']:story.append(p('来源批次：'+bid))
+        block=[p(f"期间 {r['period']} · {r['currency']}"),p(f"收入 {r['revenue']}；成本 {r['cost']}；费用 {r['expense']}"),p(f"毛利润 {r['gross_profit']}；经营利润 {r['operating_profit']}；毛利率 {margin}" )]
+        block += [p('指标版本：'+str(r['metric_version'])),p('数据类型：'+', '.join(r['data_kind']))]
+        for bid in r['batch_ids']:block.append(p('来源批次：'+bid))
+        story.append(KeepTogether(block))
         story.append(Spacer(1,14))
     def footer(c,d):
         c.setFont('STSong-Light',9);c.drawString(42,24,f'财务快照 · 第 {d.page} 页')
@@ -52,9 +53,39 @@ def pdf_bytes(rows,start,end,currency):
     return b.getvalue()
 
 def install(app):
+    @app.get('/api/v1/exports/finance.docx')
+    def word(start_period:str='2026-01',end_period:str='2026-12',currency:str='CNY'):
+        return Response(docx_bytes(snapshot(start_period,end_period,currency),start_period,end_period,currency),media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',headers={'Content-Disposition':'attachment; filename="finance.docx"'})
     @app.get('/api/v1/exports/finance.xlsx')
     def excel(start_period:str='2026-01',end_period:str='2026-12',currency:str='CNY'):
         return Response(xlsx_bytes(snapshot(start_period,end_period,currency),start_period,end_period,currency),media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',headers={'Content-Disposition':'attachment; filename="finance.xlsx"'})
     @app.get('/api/v1/exports/finance.pdf')
     def pdf(start_period:str='2026-01',end_period:str='2026-12',currency:str='CNY'):
         return Response(pdf_bytes(snapshot(start_period,end_period,currency),start_period,end_period,currency),media_type='application/pdf',headers={'Content-Disposition':'attachment; filename="finance.pdf"'})
+
+def docx_bytes(rows,start,end,currency):
+    """Minimal OpenXML text report; exact financial strings, no executable fields."""
+    from zipfile import ZipFile,ZIP_DEFLATED
+    def paragraph(value,title=False,keep=False):
+        clean=''.join(c for c in str(value) if c in '\t\n\r' or 32<=ord(c)<=0xD7FF or 0xE000<=ord(c)<=0xFFFD or 0x10000<=ord(c)<=0x10FFFF)
+        properties='<w:pPr><w:keepLines/>'+('<w:keepNext/>' if title or keep else '')+'</w:pPr>'
+        style='<w:b/><w:sz w:val="28"/>' if title else '<w:sz w:val="22"/>'
+        return '<w:p>'+properties+'<w:r><w:rPr><w:rFonts w:ascii="Calibri" w:eastAsia="Microsoft YaHei"/>'+style+'</w:rPr><w:t xml:space="preserve">'+escape(clean)+'</w:t></w:r></w:p>'
+    body=[paragraph('财务经营报告 · 文本快照',True),paragraph(f'期间 {start} 至 {end} / {currency}'),paragraph(NOTICE)]
+    if not rows:body.append(paragraph('该期间及币种无数据。'))
+    labels={'period':'期间','currency':'币种','revenue':'收入','cost':'成本','expense':'费用','gross_profit':'毛利润','operating_profit':'经营利润','gross_margin':'毛利率（比例）','metric_version':'指标版本','data_kind':'数据类型','batch_ids':'来源批次'}
+    for row in rows:
+        body.append(paragraph(str(row['period'])+' · '+str(row['currency']),True))
+        entries=[]
+        for key in FIELDS:
+            value=row.get(key)
+            values=value if isinstance(value,list) else [value]
+            for item in values:entries.append(labels[key]+'：'+('不适用' if item is None else str(item)))
+        for index,entry in enumerate(entries):body.append(paragraph(entry,keep=index<len(entries)-1))
+    document='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'+''.join(body)+'<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/></w:sectPr></w:body></w:document>'
+    output=io.BytesIO()
+    with ZipFile(output,'w',ZIP_DEFLATED) as archive:
+        archive.writestr('[Content_Types].xml','<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>')
+        archive.writestr('_rels/.rels','<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>')
+        archive.writestr('word/document.xml',document)
+    return output.getvalue()

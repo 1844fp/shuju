@@ -29,11 +29,24 @@ def publish(batch_id):
         b=src.execute(select(core.batches).where(core.batches.c.id==batch_id)).mappings().one()
         originals=src.execute(select(core.raw).where(core.raw.c.batch_id==batch_id)).mappings().all()
         entries=src.execute(select(core.facts).where(core.facts.c.batch_id==batch_id)).mappings().all()
+    from erp_imports import publication_source
+    provenance=publication_source(batch_id)
+    from erp_accounts import listing
+    approved={x['code']:x for x in listing()}
     with connection() as c:
         existing=c.execute('SELECT id FROM metadata.data_batch WHERE organization_id=%s AND sha256=%s',(org(),b['sha256'])).fetchone()
         if existing:return {'status':'already_published','batch_id':str(existing[0]),'organization_id':org()}
         c.execute('INSERT INTO metadata.data_batch(id,organization_id,source_name,sha256,status,data_kind) VALUES(%s,%s,%s,%s,%s,%s)',(batch_id,org(),b['source'],b['sha256'],'completed',b['kind']))
-        for code,category in core.ACCOUNTS.items():c.execute('INSERT INTO dim.account VALUES(%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING',(org(),code,code,category,'1.0'))
+        dimensions={}
+        for entry in entries:
+            code=json.loads(entry['payload'])['account_code'];category=entry['category']
+            if code in dimensions and dimensions[code]!=category:raise HTTPException(409,'同一批次科目类别冲突')
+            dimensions[code]=category
+        for code,category in dimensions.items():
+            old=c.execute('SELECT category FROM dim.account WHERE organization_id=%s AND code=%s',(org(),code)).fetchone()
+            if old and old[0]!=category:raise HTTPException(409,'数仓科目类别与接入事实冲突，拒绝静默重分类')
+            version=provenance[0]['account_catalog_sha256'] if provenance else 'builtin-1.0'
+            c.execute('INSERT INTO dim.account VALUES(%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING',(org(),code,approved.get(code,{}).get('name',code),category,version))
         for x in originals:c.execute('INSERT INTO ods.raw_vouchers VALUES(%s,%s,%s,%s::jsonb)',(org(),batch_id,x['row_number'],x['payload']))
         for x in entries:
             row=json.loads(x['payload']);key=json.loads(x['business_key'])
@@ -41,6 +54,13 @@ def publish(batch_id):
         for e in batch['errors']:
             original=next(x['payload'] for x in originals if x['row_number']==e['row_number'])
             c.execute('INSERT INTO metadata.rejected_rows VALUES(%s,%s,%s,%s,%s,%s::jsonb)',(org(),batch_id,e['row_number'],'IMPORT_VALIDATION',e['message'],original))
+        if provenance:
+            value,original=provenance
+            evidence={k:value.get(k) for k in ('id','ledger_id','profile','quality','cleaning_version','cleaning_token','account_catalog_sha256','cleaned_by','options','created_at','cleaned_at','committed_at')}
+            c.execute('INSERT INTO metadata.erp_snapshot VALUES(%s,%s,%s,%s,%s,%s::jsonb)',(org(),batch_id,original['digest'],value['source_name'],original['content'],json.dumps(evidence,ensure_ascii=False)))
+            for row in value['cleaned_rows']:
+                c.execute('INSERT INTO ods.erp_source_row VALUES(%s,%s,%s,%s::jsonb,%s::jsonb,%s,%s::jsonb,%s::jsonb)',(org(),batch_id,row['row_number'],json.dumps(row['raw'],ensure_ascii=False),json.dumps(row['normalized'],ensure_ascii=False) if row['normalized'] is not None else None,row['status'],json.dumps(row['errors'],ensure_ascii=False),json.dumps(row['changes'],ensure_ascii=False)))
+            for source,target in [('metadata.erp_snapshot','ods.erp_source_row'),('ods.erp_source_row','ods.raw_vouchers')]:c.execute('INSERT INTO metadata.data_lineage VALUES(%s,%s,%s,%s,%s)',(org(),source,target,batch_id,value['cleaning_version']))
         for a,z in [('ods.raw_vouchers','dwd.fact_journal_entry'),('dwd.fact_journal_entry','dws.monthly_finance'),('dws.monthly_finance','ads.finance_dashboard')]:c.execute('INSERT INTO metadata.data_lineage VALUES(%s,%s,%s,%s,%s)',(org(),a,z,batch_id,'1.0'))
     return {'status':'published','batch_id':batch_id,'organization_id':org(),'accepted_rows':len(entries)}
 

@@ -26,5 +26,6 @@ class Round2(unittest.TestCase):
   responses=[json.loads(line) for line in out.splitlines() if line.startswith('{')]
   self.assertTrue(any(r.get('id')==1 and 'result' in r for r in responses),err)
   tools=next(r['result']['tools'] for r in responses if r.get('id')==2)
-  self.assertEqual(len(tools),4)
+  self.assertEqual(len(tools),8)
 if __name__=='__main__': unittest.main()
+

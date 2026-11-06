@@ -36,14 +36,18 @@ def create(body):
     if body.category not in ('operating','investing','financing','unclassified') or body.data_kind not in ('uploaded','simulated'):raise ValueError('现金流分类或来源标记无效')
     value=body.model_dump(mode='json');value.update(inflow=core.money(incoming),outflow=core.money(outgoing))
     meta.create_all(core.current_db())
+    import enterprise_controls as controls
+    controls.initialize(core.current_db())
     with core.current_db().begin() as c:
         old=c.execute(select(bank.c.payload).where(bank.c.external_id==body.external_id)).scalar()
         if old:
             previous=json.loads(old)
             if any(previous[k]!=v for k,v in value.items()):raise HTTPException(409,'相同外部编号已有不同内容')
             return previous
+        controls.assert_open(c,{value['posting_date'][:7]})
         value.update(id=core.uid(),created_at=core.now(),raw_payload=body.model_dump(mode='json'));c.execute(bank.insert().values(id=value['id'],external_id=body.external_id,payload=json.dumps(value,ensure_ascii=False)))
         c.execute(core.audit.insert().values(id=core.uid(),action='bank_register',resource=value['id'],created=core.now()))
+        controls.append(c,'bank_register',value['id'])
     return value
 
 def reconcile(start,end,currency,account):

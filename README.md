@@ -1,5 +1,14 @@
 # FinAgent DataHub · 财务数据中台
 
+
+## v0.5.0完整平台快照
+
+本轮复用现有企业接入，新增账期与四眼控制、八主题CSV/XLSX及源控制清单、采购五单证据匹配、八类风险、并行Agent与审批恢复、组织任务记忆、MCP真实全链、PDF/DOCX知识与本地语义融合、CFO核准指标/情景/回测、微软十年公开事实以及Word/PDF/XLSX报告。以[完整验收](docs/REDESIGN_ACCEPTANCE.md)、[交付复跑清单](docs/DELIVERY_CHECKLIST.md)和[本轮发布清单](docs/RELEASE_V050.md)为准；R11已完成收入、费用及核准现金流滚动回测与naive基线；现金流输入须独立核准，缺月明确拒绝，不将均值基线称复杂训练模型。
+
+仅本机演示验收，生产HTTPS、客户ERP/SSO及正式通知等需外部环境；Docker按用户要求最后补齐。五单付款记录仅是证据，系统不执行付款或入账。公开年报、模拟数据与真实账套分开；模型数值由确定性引擎计算。运行视频保存在本机work，不进入源码仓库。
+
+源码采用单一真实`versions/v0.5.0`快照，含未独立发布的v0.4企业控制；不伪造旧源码历史。远端实际发布状态见[版本说明](docs/VERSIONS.md)。
+
 ERP接入：[使用与配置](docs/ERP_INTEGRATION.md)、[验收与边界](docs/ERP_ACCEPTANCE.md)。数据源工作台已增加常见财务软件导出、企业科目核准、只读源、清洗隔离和人工确认流程。
 
 最新增量：[模型知识效果与运行保障验收](docs/MODEL_KNOWLEDGE_RELIABILITY_ACCEPTANCE.md)、[运行手册](docs/OPERATIONS_RUNBOOK.md)。v0.2.0 增加公开资料评测、长文分块与拒绝路径修复、恢复演练和持续本机监控。下载资料、评测库、备份及事件均在被忽略的 work/ 内。

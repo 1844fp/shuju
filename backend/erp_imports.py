@@ -16,6 +16,7 @@ FILES=Table('ods_erp_file',META,Column('id',String,primary_key=True),Column('dig
 RUNS=Table('metadata_erp_run',META,Column('id',String,primary_key=True),Column('payload',Text))
 LEDGER=Table('metadata_erp_ledger',META,Column('id',String,primary_key=True),Column('name',String))
 RECEIPTS=Table('metadata_erp_receipt',META,Column('id',String,primary_key=True),Column('configuration',String),Column('batch_id',String))
+BATCH_LINKS=Table('metadata_erp_batch_link',META,Column('batch_id',String,primary_key=True),Column('run_id',String))
 LOCK=threading.RLock()
 VERSION='erp-cleaning-1.0'
 MAX_ROWS=10000
@@ -273,7 +274,8 @@ def clean(identifier,options):
     n=r['normalized'];totals[n['currency']]['debit']+=Decimal(n['debit']);totals[n['currency']]['credit']+=Decimal(n['credit'])
   quality=dict(source_rows=len(records),valid_rows=sum(r['status']=='valid' for r in records),quarantined_rows=sum(r['status']=='quarantined' for r in records),excluded_rows=sum(r['status'].startswith('excluded') for r in records),changed_rows=sum(bool(r['changes']) for r in records),commit_blocked=blocked,totals={c:{k:format(x,'.2f') for k,x in t.items()} for c,t in totals.items()},data_kind=o['data_kind'],metric_version='1.0')
   token=sha(dump(dict(file=v['file_sha256'],ledger=v['ledger_id'],profile=v['profile'],options=o,version=VERSION,account_catalog=catalog_digest)).encode())
-  v.update(status='cleaned',options=o,cleaned_rows=records,quality=quality,cleaning_token=token,account_catalog_sha256=catalog_digest,cleaned_at=core.now());save(v)
+  who=core.request_actor.get()
+  v.update(status='cleaned',options=o,cleaned_rows=records,quality=quality,cleaning_token=token,account_catalog_sha256=catalog_digest,cleaned_at=core.now(),cleaned_by=who['id'] if who else None);save(v)
   return public(v)
 
 def commit(identifier,body):
@@ -287,6 +289,9 @@ def commit(identifier,body):
   if v['status']!='cleaned' or v['quality']['commit_blocked'] or not v['quality']['valid_rows']:raise HTTPException(422,'没有合格凭证或凭证身份不明，请修正源文件')
   if v['quality']['quarantined_rows'] and not body.acknowledge_quarantine:raise HTTPException(409,'须确认仅入库合格凭证，异常凭证保留隔离')
   database=db();digest=sha(('erp-v1|'+v['ledger_id']+'|'+v['file_sha256']).encode())
+  import enterprise_controls as controls
+  controls.initialize(database);reference=controls.approval_for(v) if controls.strict() else None
+  with database.connect() as c:controls.assert_approval(c,reference,digest)
   normalized=[r['normalized'] for r in v['cleaned_rows'] if r['status']=='valid']
   source_system='erp-'+sha(v['ledger_id'].encode())[:24]
   # Missing voucher categories must not create a second identity for an existing voucher.
@@ -304,15 +309,33 @@ def commit(identifier,body):
     receipt=c.execute(select(RECEIPTS).where(RECEIPTS.c.id==digest)).mappings().first()
     if receipt and receipt['configuration']!=v['cleaning_token']:raise HTTPException(409,'同一文件已按其他清洗配置提交，不允许静默重复入库')
     if not receipt:c.execute(RECEIPTS.insert().values(id=digest,configuration=v['cleaning_token']))
-   batch=core.ingest(database,normalized,digest,v['source_name'],source_system,kind=v['quality']['data_kind'],account_catalog=approved_accounts)
+   batch=core.ingest(database,normalized,digest,v['source_name'],source_system,kind=v['quality']['data_kind'],account_catalog=approved_accounts,approval_reference=reference)
    for error in batch['errors']:
     original=normalized[error['row_number']-2]['source_row_number']
     row=next(r for r in v['cleaned_rows'] if r['row_number']==original)
     row.update(status='quarantined_at_commit');row['errors'].append(dict(code='core_rejected',message=error['message']))
    v.update(status='committed',batch=batch,source_system=source_system,committed_at=core.now());save(v)
    with database.begin() as c:c.execute(RECEIPTS.update().where(RECEIPTS.c.id==digest).values(batch_id=batch['batch_id']))
+   with database.begin() as c:
+    if not c.execute(select(BATCH_LINKS.c.batch_id).where(BATCH_LINKS.c.batch_id==batch['batch_id'])).first():c.execute(BATCH_LINKS.insert().values(batch_id=batch['batch_id'],run_id=v['id']))
    return public(v)
   except IntegrityError:raise HTTPException(409,'并发提交，请重试获取已存在批次；不会重复计入') from None
+
+def publication_source(batch_id):
+ database=db();value=None
+ with database.connect() as c:
+  linked=c.execute(select(BATCH_LINKS.c.run_id).where(BATCH_LINKS.c.batch_id==batch_id)).scalar()
+  if linked:value=get(linked)
+  else:
+   token=c.execute(select(RECEIPTS.c.configuration).where(RECEIPTS.c.batch_id==batch_id)).scalar()
+   if token:
+    for payload in c.execution_options(stream_results=True).execute(select(RUNS.c.payload).where(RUNS.c.payload.contains(token)) ).scalars():
+     candidate=json.loads(payload)
+     if candidate.get('batch',{}).get('batch_id')==batch_id and candidate['status']=='committed':value=candidate;break
+  if value:
+   original=c.execute(select(FILES).where(FILES.c.id==value['file_id'])).mappings().one()
+   return value,dict(original)
+ return None
 
 def install(app):
  @app.get('/api/v1/erp/profiles')

@@ -1,5 +1,17 @@
 # API 契约草案 v0.1
 
+GET /api/v1/finance-query?q=查询2026年第三季度费用最高的五个部门&currency=CNY：严格模板识别全年/季度/月份、部门费用Top5；销售费用限定已核准selling_expense映射。返回mode=controlled_template、期间、币种、排序金额字符串、批次及来源标记、指标版本与查询参数。未支持意图422，不默认替换成其他查询，不接受任意SQL。
+
+## 企业接收控制与科目贯通（v0.4.0）
+
+GET /enterprise/policy 返回身份模式与approval_required。GET /enterprise/periods；POST /enterprise/periods/{YYYY-MM}/close、/reopen 接收 {expected_version,reason}，版本不符409。关闭账期的新财务输入409，原内容幂等重放与查询保留。
+
+严格模式需users及FINAGENT_ERP_APPROVAL_REQUIRED=1：POST /erp/runs/{id}/request-approval由本次清洗人发起，返回201审批记录；GET /enterprise/approvals；POST /enterprise/approvals/{id}/review {decision:approved或rejected,reason}，仅不同管理员可处理，快照变化或已处理409、自批403、跨组织404。原commit请求体不变，新增严格校验；旧直接导入不能绕过。开关默认0，演示模式不代表已建立职责分离。
+
+GET /enterprise/audit 返回当前组织最新100个控制事件；GET /enterprise/audit/verify 返回valid、checked和last_hash或首个无效序号。本地链无外部不可篡改锚点。GET/POST /finance/statements/mappings；POST {mappings:[{code,line}],reason}，仅明确兼容的核准科目，已有映射不静默覆盖409。未映射科目生成报表422；报表新增mapping_version，metric_version=statement-1.1，仍completeness=unverified。上述写接口沿用现有管理员RBAC，读接口亦需当前组织身份。
+
+说明与验收见 ENTERPRISE_CONTROLS_ACCEPTANCE.md。
+
 ## ERP接入增量
 GET /erp/profiles、GET /erp/templates/{profile}：七种常见导出字段预设及明确模拟模板。POST /erp/preview：multipart file、ledger_id、profile、可选sheet/header_row，201预览，保留原始字节，不入事实。GET /erp/runs、/{id}、/{id}/rows?status&offset&limit：当前组织的导入历史、详情和行级审查；跨组织404。
 

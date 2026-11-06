@@ -14,7 +14,21 @@ ALIASES={
  'net_income':('净利润','net income'),
 }
 def fiscal_years(text):
- return set(re.findall(r'(?i)\bFY\s*(20\d{2})\b',text)+re.findall(r'(20\d{2})\s*财年',text))
+ """Fiscal scope, not policy effective dates. Bare years need financial context."""
+ explicit=set(re.findall(r'(?i)(?<![a-z0-9])FY\s*(20\d{2})(?![0-9])',text)+re.findall(r'(20\d{2})\s*财年',text))
+ # Policy/document effective dates are handled exclusively by as_of metadata.
+ cleaned=re.sub(r'20\d{2}[-/]\d{1,2}[-/]\d{1,2}',' ',text)
+ financial=bool(re.search(r'财报|年报|收入|营收|利润|资产|负债|现金流|revenue|income|profit|fiscal',cleaned,re.I))
+ policy=bool(re.search(r'生效|施行|实施日期|effective|制度',cleaned,re.I))
+ if policy and not financial:return explicit
+ years=set(explicit)
+ for start,end in re.findall(r'(?i)(?<!\d)(?:FY\s*)?(20\d{2})\s*年?\s*(?:-|–|—|至|到)\s*(?:FY\s*)?(20\d{2})\s*年?',cleaned):
+  if int(start)>int(end):raise ValueError('reversed fiscal year range')
+  years.update(str(y) for y in range(int(start),int(end)+1))
+ if financial:
+  years.update(re.findall(r'(?<![0-9])(20\d{2})(?![0-9])',cleaned))
+ return years
+
 def concepts(text):
  text=text.lower().replace('_',' ')
  return {key for key,terms in ALIASES.items() if any(term in text for term in terms)}

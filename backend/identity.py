@@ -98,8 +98,10 @@ def install_identity(app):
             if not allowed:return JSONResponse(status_code=403,content={'error':{'code':'forbidden','message':'当前角色无权执行此操作','trace_id':core.uid()}})
         organization_marker=core.request_organization.set(u['organization_id'])
         marker=core.request_database.set(tenant_engine(u['organization_id']))
+        actor_marker=core.request_actor.set({k:u[k] for k in ('id','username','role','organization_id')})
         try:return await call_next(request)
         finally:
+            core.request_actor.reset(actor_marker)
             core.request_database.reset(marker)
             core.request_organization.reset(organization_marker)
 

@@ -1,0 +1,10 @@
+# 工作台存储
+组织数据库metadata_workbench_document：id主键、organization、maker、status、payload原始规范JSON、review、draft。原始输入不可更新；审核和草稿使用status条件UPDATE，冲突409。金额为字符串经Decimal验证；组织隔离同时使用current_db与organization过滤。不写事实凭证表。
+
+增量：external_id存组织与外部编号组合SHA256并唯一；snapshot_hash保存规范payload SHA256；enterprise_controls账期检查及哈希链事件同事务。旧原型表需要增列迁移；本轮仅新临时库验证。agent运行表含organization/query/result，Harness checkpoint环境路径仅管理员配置。
+核准输入metadata_cfo_approved_input含organization/maker/reviewer/status/payload/hash，所有金额字符串Decimal解析；不可变快照由独立管理员核准，核准并非审计意见。metadata_cfo_calculation持久保存计算输入来源、版本和结果，不覆盖原始值。
+公开公司仅只读文件快照，不写租户总账或月度仓。年度facts/manifest及arYYYY.html保留源URL/原文SHA/披露版本/原文行，API输出固定快照批次摘要；独立年度时间轴，无年度转月度和转凭证。
+主题逻辑撤销仅metadata_theme_import.status=revoked；保留原payload/业务键记录，审计事件包含原因。业务记录是不可变证据，不因撤销物理删除；下游仅使用confirmed批次的active投影，不自动改总账。
+R15 metadata_procurement_evidence组织接入库表：复合hash主键(org,case,currency,kind)，规范payload+SHA、maker。只追加不可覆盖，相同内容重放幂等，不同内容409；账期保护及enterprise_controls事件同事务。匹配为只读确定性视图，不写总账和审批状态。来源manifest对接待数据角色冻结接口，不接受任意文件路径。
+
+R11回测复用metadata_cfo_approved_input，无新增输入表；operating_cashflow映射核准values.operating_cash_flow，按组织/币种/月读取且同月多版本409；结果metadata_cfo_calculation保存metric、参数、每月source_id/hash/version/data_kind及rolling/naive误差，无现金流利润推导。

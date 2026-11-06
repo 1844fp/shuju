@@ -20,6 +20,16 @@ def install(app):
    return {**engine.info(),'matches':matches,'evidence_status':'matches_found' if matches else 'no_matching_evidence'}
   except ValueError as exc:raise HTTPException(422,str(exc))
 
+ @app.get('/api/v1/knowledge/hybrid-search')
+ def hybrid(q:str,as_of:date|None=None,version:str|None=None,limit:int=5):
+  if engine.status!='ready':raise HTTPException(503,engine.info())
+  from agents.hybrid import hybrid_search,verify_citations
+  db=core.current_db();meta.create_all(db)
+  with db.connect() as c:items=[json.loads(x) for x in c.execute(select(docs.c.payload)).scalars()]
+  try:matches=hybrid_search(q,items,engine,as_of=as_of.isoformat() if as_of else None,version=version,limit=limit)
+  except ValueError as ex:raise HTTPException(422,str(ex)) from None
+  return {'matches':matches,'method':'bm25_semantic_rrf','citation_validation':verify_citations(matches,items),'evidence_status':'matches_found' if matches else 'no_matching_evidence'}
+
 # Resolve the host after install() is defined so direct module tests cannot cycle.
 import app as core
 from knowledge_vectors import docs,meta

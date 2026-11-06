@@ -7,3 +7,5 @@ openpyxl==3.1.5
 httpx==0.28.1
 
 reportlab==5.1.0
+
+-r ../agents/document_requirements.txt

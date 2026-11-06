@@ -13,6 +13,7 @@ ROOT=Path(__file__).resolve().parents[1]
 from contextvars import ContextVar
 request_database=ContextVar('request_database',default=None)
 request_organization=ContextVar('request_organization',default='local-demo')
+request_actor=ContextVar('request_actor',default=None)
 def current_db(): return request_database.get() if request_database.get() is not None else app.state.db
 ACCOUNTS={'1002':'asset','6001':'revenue','6401':'cost','6602':'expense'}
 FIELDS=['posting_date','voucher_no','line_no','account_code','department_code','currency','debit','credit']
@@ -38,13 +39,17 @@ def engine(url=None):
         c.execute(text("CREATE VIEW IF NOT EXISTS ads_finance_dashboard AS SELECT *, revenue_cents-cost_cents-expense_cents AS operating_profit_cents FROM dws_monthly_finance"))
     return e
 
-def ingest(e, rows, digest, source, source_system='local', kind='uploaded', account_catalog=None):
+def ingest(e, rows, digest, source, source_system='local', kind='uploaded', account_catalog=None, approval_reference=None, trusted_bootstrap=False):
+    import enterprise_controls as controls
+    controls.initialize(e)
     catalog=ACCOUNTS if account_catalog is None else account_catalog
     if not isinstance(catalog,dict) or any(x not in {'asset','liability','equity','revenue','cost','expense','other'} for x in catalog.values()):raise ValueError('服务端科目分类无效')
     if not re.fullmatch(r'[A-Za-z0-9_-]{1,50}',source_system): raise ValueError('来源系统只能使用字母、数字、下划线和连字符')
     with e.begin() as c:
         old=c.execute(select(batches).where(batches.c.sha256==digest)).mappings().first()
         if old: return json.loads(old['details'])
+        controls.assert_approval(c,approval_reference,digest,bootstrap=trusted_bootstrap,kind=kind)
+        controls.assert_open(c,{str(row.get('posting_date',''))[:7] for row in rows})
         bid=uid(); groups=defaultdict(list); errors=[]; accepted=[]
         for n,row in enumerate(rows,2):
             key=(str(row.get('posting_date','')),str(row.get('voucher_no','')),str(row.get('currency','')))
@@ -77,6 +82,7 @@ def ingest(e, rows, digest, source, source_system='local', kind='uploaded', acco
         result=dict(batch_id=bid,status='committed' if accepted else 'failed',total_rows=len(rows),accepted_rows=len(accepted),rejected_rows=len(errors),errors=errors,source=source,data_kind=kind)
         c.execute(batches.insert().values(id=bid,sha256=digest,source=source,kind=kind,status=result['status'],details=json.dumps(result,ensure_ascii=False)))
         c.execute(audit.insert().values(id=uid(),action='import',resource=bid,created=now()))
+        controls.append(c,'data_import',bid,dict(file_digest=digest,source_system=source_system,accepted_rows=len(accepted),rejected_rows=len(errors),approval_reference=approval_reference))
         return result
 
 def metrics(e,start='2026-01',end='2026-12',currency='CNY'):
@@ -299,3 +305,37 @@ erp_database.install(app)
 
 import erp_accounts
 erp_accounts.install(app)
+
+import enterprise_controls
+enterprise_controls.install(app)
+
+import finance_workbench, agent_runs
+finance_workbench.install(app)
+agent_runs.install(app)
+
+import cfo_briefings
+cfo_briefings.install(app)
+
+import cfo_models
+cfo_models.install(app)
+
+import finance_query
+finance_query.install(app)
+
+import theme_routes
+theme_routes.install(app)
+
+import knowledge_uploads
+knowledge_uploads.install(app)
+
+import public_company
+public_company.install(app)
+
+import department_metrics
+department_metrics.install(app)
+
+import procurement
+procurement.install(app)
+
+import supplier_registry
+supplier_registry.install(app)
