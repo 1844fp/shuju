@@ -5,6 +5,7 @@
 ## 可用版本
 
 - `main`：最新集成源码，后续更新以此为基础。
+- `versions/v0.5.1`：并行恢复测试真实修复快照`ad11b25da763c1661e404c02078bbc1309b97f44`，两次GitHub push CI成功，见RELEASE_V051.md。
 - `versions/v0.5.0`：真实完整平台快照 `3089856bc114c7af8e4112f89da30b6081840066`，含v0.4企业控制与R11三指标回测；未伪造独立v0.4历史。远端CI存在耗时断言失败，见RELEASE_V050_CI.md。
 - `versions/v0.3.0`：企业ERP导入、科目核准及清洗全流程；使用及验收见ERP_INTEGRATION.md、ERP_ACCEPTANCE.md。
 - `versions/v0.2.0`：公开数据模型知识效果、运行保障与监控验收版；详见 MODEL_KNOWLEDGE_RELIABILITY_ACCEPTANCE.md。
