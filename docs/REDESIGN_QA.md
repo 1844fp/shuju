@@ -71,3 +71,8 @@ tests/test_r06_r12_r13_qa.py三项通过（1.953秒）。真实TCP随机本机�
 ## R11与干净CI最终证据（2026-11-07）
 新增test_r11_backtests_qa.py两项通过：费用均值0.15/0.25；核准经营现金流均值5.00/25.01、误差25.01及naive10.00；未核准及首尾/中间缺月422、自批403、reader403、跨组织无数据与单据404、同月多核准409。原来源ID/hash/reference/version/simulated、训练严格早于目标、未来月份不改变已有预测均有断言。结果work/redesign/r11-cashflow-result.json。本机164执行163通过1跳过，21.394秒，qa-r11-final-regression.txt。
 主控本条授权的CI修复：缺公开facts/manifest时4项语料测试明确skip并提示python data_platform/msft_annual.py，不mock通过。新增infrastructure/requirements-qa.txt锁定PyMuPDF==1.27.2并由CI安装。work/ci-clean-runtime从声明依赖全新安装；work/qa-clean-source不复制work语料或旧runtime，PYTHONPATH仅新依赖/副本源码，python -S禁用全局包。实际164执行159通过5跳过（4语料+1环境），20.295秒，副本work/clean-ci-results.txt；机器摘要work/redesign/clean-ci-evidence.json。不等于Linux远端CI验收。未操作Docker/密钥/全局依赖。
+
+## v0.5.0远端CI并行测试修复（2026-11-07）
+已通过GitHub连接器独立读取run42264202088的test job128051711234真实日志，失败为first=0.0885089189999988不满足>=0.1。gh CLI未登录，未读取凭据，转用已有GitHub连接器只读核验。当前并行关键路径data→三个分支→report，五次20ms不意味着串行100ms。
+仅修改tests/test_r06_r12_r13_qa.py：去掉串行总耗时下限；analysis/budget/audit三方Barrier必须全部进入才释放（10秒仅死锁保护）；校验前三个事件均entered、三角色齐全，data先行及report完整join；实际core.finance金额107500.00、恰好五次调用、恢复全reused且不增加调用全部保留。计时仍作为观测写latency.json，不用于机器速度判断。若串行或缺角色执行，屏障不能完成；未降低真实并行要求。
+4项并行专项通过（1.125秒）；python -S+独立work/ci-clean-runtime声明依赖连续10次通过（2.941秒）；本机全量164执行163通过1环境跳过（19.639秒），qa-ci-parallel-fix.txt。机器摘要ci-parallel-fix.json。本会话未提交/推送，由主控发布后必须重新核验真实Actions；不能把本地通过写成远端修复已绿。未操作Docker。

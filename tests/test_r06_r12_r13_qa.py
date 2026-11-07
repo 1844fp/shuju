@@ -32,10 +32,25 @@ class Acceptance(unittest.TestCase):
    rows=list(csv.DictReader(io.StringIO((core.ROOT/'data_platform/sample_vouchers.csv').read_text(encoding='utf-8-sig'))));core.ingest(db,rows,'qa','qa',kind='simulated')
    token=core.request_database.set(db);calls=[]
    try:
-    def tool(q,previous):time.sleep(.02);calls.append(1);return core.finance(**q)
-    h=Harness(Path(d)/'h.sqlite');tools={r:tool for r in ROLES};start=time.monotonic();a=h.run('t','qa',{},tools);first=time.monotonic()-start;start=time.monotonic();b=h.run('t','qa',{},tools);recovery=time.monotonic()-start
-    self.assertEqual(a['status'],'completed');self.assertEqual(b['status'],'completed');self.assertEqual(len(calls),5);self.assertTrue(all(t['status']=='reused' for t in b['trace']));self.assertEqual(b['results']['analysis'][0]['revenue'],'107500.00');self.assertGreaterEqual(first,.1)
-    (OUT/'latency.json').write_text(json.dumps({'first_seconds':first,'recovery_seconds':recovery,'actual_metric_calls':len(calls),'injected_delay_per_call_seconds':.02,'all_reused':True}))
+    barrier=threading.Barrier(3);events=[];lock=threading.Lock()
+    def tool(role):
+     def invoke(q,previous):
+      if role in ('analysis','budget','audit'):
+       if 'data' not in previous:raise AssertionError('branch ran before data')
+       with lock:events.append(('entered',role))
+       # All three real business tools must enter before any may proceed.
+       # A serial implementation breaks the barrier and cannot complete.
+       barrier.wait(timeout=10)
+       with lock:events.append(('released',role))
+      if role=='report' and not all(r in previous for r in ('data','analysis','budget','audit')):raise AssertionError('report ran before join')
+      time.sleep(.02)
+      with lock:calls.append(role)
+      return core.finance(**q)
+     return invoke
+    h=Harness(Path(d)/'h.sqlite');tools={r:tool(r) for r in ROLES};start=time.monotonic();a=h.run('t','qa',{},tools,tool_timeout=15);first=time.monotonic()-start;start=time.monotonic();b=h.run('t','qa',{},tools,tool_timeout=15);recovery=time.monotonic()-start
+    self.assertEqual(a['status'],'completed');self.assertEqual(b['status'],'completed');self.assertCountEqual(calls,ROLES);self.assertEqual(len(calls),5);self.assertTrue(all(t['status']=='reused' for t in b['trace']));self.assertEqual(b['results']['analysis'][0]['revenue'],'107500.00')
+    self.assertEqual([event for event,role in events[:3]],['entered']*3);self.assertCountEqual([role for event,role in events[:3]],['analysis','budget','audit']);self.assertEqual(len(events),6)
+    (OUT/'latency.json').write_text(json.dumps({'first_seconds':first,'recovery_seconds':recovery,'actual_metric_calls':len(calls),'injected_delay_per_call_seconds':.02,'all_reused':True,'parallel_barrier_events':events,'timing_is_observation_only':True}))
    finally:core.request_database.reset(token);db.dispose()
  def test_real_http_eight_rule_envelope(self):
   import test_identity as fixture,httpx,uvicorn
