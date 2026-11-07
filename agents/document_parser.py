@@ -1,14 +1,23 @@
-"""Bounded local PDF/DOCX text extraction; no network, OCR or synthetic pages."""
-import io,zipfile,hashlib
+"""Bounded local document text extraction with image OCR provenance."""
+import io,zipfile,hashlib,re
 from datetime import date
+from pathlib import PurePath
 from xml.etree import ElementTree as ET
 MAX_INPUT=5*1024*1024
 
-def parse_document(data:bytes,filename:str,*,title:str,version:str,effective_date:str)->list[dict]:
+def selected_pdf_pages(value: str) -> tuple[int, ...]:
+ if not value.strip():return ()
+ if not re.fullmatch(r'\s*[1-9][0-9]{0,2}(?:\s*,\s*[1-9][0-9]{0,2}){0,3}\s*',value):
+  raise ValueError('enter up to four comma-separated page numbers')
+ return tuple(sorted({int(page) for page in value.split(',')}))
+
+
+def parse_document(data:bytes,filename:str,*,title:str,version:str,effective_date:str,ocr_scanned_pdf:bool=False,ocr_pdf_pages:tuple[int,...]=())->list[dict]:
  date.fromisoformat(effective_date)
  if not title or len(title)>120 or not version or len(version)>40:raise ValueError('invalid metadata')
  if not isinstance(data,bytes) or not 0<len(data)<=MAX_INPUT:raise ValueError('file size limit')
- source=hashlib.sha256(data).hexdigest();parts=[]
+ source=hashlib.sha256(data).hexdigest();parts=[];extraction={};page_extraction={}
+ if (ocr_scanned_pdf or ocr_pdf_pages) and not filename.lower().endswith('.pdf'):raise ValueError('PDF OCR requires PDF')
  if filename.lower().endswith('.docx'):
   with zipfile.ZipFile(io.BytesIO(data)) as z:
    entries=z.infolist()
@@ -26,6 +35,8 @@ def parse_document(data:bytes,filename:str,*,title:str,version:str,effective_dat
   from pypdf import PdfReader
   reader=PdfReader(io.BytesIO(data),strict=True)
   if reader.is_encrypted or len(reader.pages)>100:raise ValueError('encrypted PDF or page limit')
+  if any(page<1 or page>len(reader.pages) for page in ocr_pdf_pages):raise ValueError('OCR page outside PDF')
+  scan_pages=set(ocr_pdf_pages)
   for index,page in enumerate(reader.pages,1):
    # Conservative compressed stream cap before text extraction.
    contents=page.get('/Contents')
@@ -49,6 +60,22 @@ def parse_document(data:bytes,filename:str,*,title:str,version:str,effective_dat
    text=page.extract_text() or ''
    if len(text)>100000:raise ValueError('PDF page text limit')
    if text.strip():parts.append((text,f'PDF page {index}',index))
+   elif ocr_scanned_pdf:scan_pages.add(index)
+  if len(scan_pages)>4:raise ValueError('PDF OCR supports up to four pages total')
+  if scan_pages:
+   from agents.image_ocr import recognize
+   for index in sorted(scan_pages):
+    text,language=recognize(data,'.pdf',pdf_page=index)
+    if text.strip():
+     locator=f'PDF page {index} OCR'
+     parts.append((text,locator,index))
+     page_extraction[locator]={'extraction_method':'windows_ocr','ocr_language':language,'requires_review':True}
+   parts.sort(key=lambda part:part[2])
+ elif PurePath(filename).suffix.lower() in ('.png','.jpg','.jpeg'):
+  from agents.image_ocr import recognize
+  text,language=recognize(data,PurePath(filename).suffix.lower())
+  if text.strip():parts.append((text,'Image OCR',None))
+  extraction={'extraction_method':'windows_ocr','ocr_language':language,'requires_review':True}
  else:raise ValueError('unsupported document type')
  result=[]
  for text,locator,page in parts:
@@ -57,6 +84,7 @@ def parse_document(data:bytes,filename:str,*,title:str,version:str,effective_dat
    if len(result)>=100:raise ValueError('chunk limit')
    item=dict(id=hashlib.sha256((source+version+locator+str(start)).encode()).hexdigest(),title=title,version=version,effective_date=effective_date,locator=f'{locator}; characters {start}:{start+len(chunk)}',text=chunk,source_sha256=source,content_sha256=hashlib.sha256(chunk.encode()).hexdigest())
    if page is not None:item['page']=page
+   item.update(page_extraction.get(locator,extraction))
    result.append(item)
- if not result:raise ValueError('no extractable text; OCR not performed')
+ if not result:raise ValueError('no extractable text')
  return result
