@@ -49,6 +49,18 @@ def backtest():
   pred.append({'year':years[i]['fiscal_year'],'training_years':[x['fiscal_year'] for x in history],'actual':str(actual),'rolling3mean':str(forecast),'naive':str(naive),'rolling_error':str(abs(actual-forecast)),'naive_error':str(abs(actual-naive)),'sources':[x['source'] for x in history]+[years[i]['source']]})
  return {**{k:v for k,v in a.items() if k!='years'},'method':'annual rolling3yearmean vs previous-year naive; baseline, not trained model','predictions':pred,'rolling_mae':str(sum((Decimal(x['rolling_error']) for x in pred),Decimal(0))/len(pred)),'naive_mae':str(sum((Decimal(x['naive_error']) for x in pred),Decimal(0))/len(pred))}
 def install(app):
+ @app.get('/api/v1/public-company/a-share')
+ def a_share(format: str = 'html'):
+  from fastapi.responses import HTMLResponse
+  from data_platform.a_share_annual import ROOT as corpus, render
+  try:
+   rows=json.loads((corpus/'facts.json').read_text(encoding='utf-8'))
+  except (OSError, ValueError):
+   raise HTTPException(503,'A 股公开财报测试集尚未准备') from None
+  if format=='json':return {'data_kind':'public_disclosure','rows':rows}
+  if format!='html':raise HTTPException(422,'format 仅支持 html 或 json')
+  return HTMLResponse(render(rows))
+
  @app.get('/api/v1/public-company')
  def overview():
   f,s,b=load();return {**envelope(b),'fiscal_years':sorted(s),'fact_count':len(f),'sources':list(s.values())}

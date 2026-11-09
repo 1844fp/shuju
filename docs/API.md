@@ -1,5 +1,11 @@
 # API 契约草案 v0.1
 
+`GET /api/v1/public-company/a-share` 查看 A 股公开财报样本，`?format=json` 返回同一快照的 15 个公司年度与来源摘要。由项目内六份巨潮资讯年度报告生成，资料缺失时返回 503。沿用当前服务权限，数据集与凭证账套独立。
+
+PDF 上传可选 multipart `ocr_pdf_pages`，例如 `1,3`。指定页码整页识别并保留该页原生文字，OCR 片段单独标记并带原始页码。整页识别与自动识别无文字层页面合计最多 4 页。页码去重排序后绑定快照，越界或无效页码返回 422。整页 OCR 可能重复页面已有文字，需按提取方式核对引用。
+
+`POST /api/v1/knowledge/upload` 在 Windows 本机支持 PNG/JPEG 单张图像识别。PDF 可通过 multipart `ocr_scanned_pdf=true` 识别最多 4 个无文字层的页面，并保留原生文字及原始页码。默认保持原生解析。启用 PDF OCR 的快照单独幂等，保留原文件摘要和组织权限。识别结果返回 `extraction_method=windows_ocr`、`ocr_language` 和 `requires_review=true`，仅 OCR 片段保存这些元数据。引擎不可用或忙返回 503，无可识别文字、格式无效或超限返回 422。
+
 GET /api/v1/finance-query?q=查询2026年第三季度费用最高的五个部门&currency=CNY：严格模板识别全年/季度/月份、部门费用Top5；销售费用限定已核准selling_expense映射。返回mode=controlled_template、期间、币种、排序金额字符串、批次及来源标记、指标版本与查询参数。未支持意图422，不默认替换成其他查询，不接受任意SQL。
 
 ## 企业接收控制与科目贯通（v0.4.0）
